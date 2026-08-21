@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites><testsuite name="SIL_Telemetry_Evaluation"><testcase name="TC_002_VOLTAGE_FAULT" classname="AERO-102::TC_002_VOLTAGE_FAULT" time="30.0"><failure message="Execution timed out after 30s">[]</failure></testcase><testcase name="TC_001_NOMINAL_TELEMETRY" classname="AERO-101::TC_001_NOMINAL_TELEMETRY" time="30.0"><failure message="Execution timed out after 30s">[]</failure></testcase></testsuite></testsuites>
