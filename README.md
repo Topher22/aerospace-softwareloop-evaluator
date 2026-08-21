@@ -3,33 +3,26 @@ An automated, data-driven Software-in-the-Loop (SIL) Telemetry Verification Fram
 
 This harness executes compiled control software binaries via interactive IPC pipes (stdin/stdout), evaluates physical state telemetry against defined safety boundaries across time-series scenarios, and automatically pushes JUnit XML test execution reports to Jira/Xray for regulatory compliance tracking (DO-178C / ISO 26262).
 # Architecture & Data Flow
- ┌─────────────────────────────────────────────────────────────────────────────┐
- │                           JSON Test Scenario                                │
- │   • Input Stimuli Commands   • Safety Bounds (Min/Max)  • Jira Key          │
- └──────────────────────┬──────────────────────────────────────────────────────┘
-                        │
-                        ▼
- ┌──────────────────────────────────────────────┐       JSON Input Stimuli (stdin)       ┌──────────────────────────────────────────────┐
- │                                              ├───────────────────────────────────────►│                                              │
- │           Evaluation Harness Engine          │                                │              System Under Test (SUT)          │
- │              (eval_harness / Python)         │                                │       (C++ Controller / Python Binary)       │
- │                                              │◄───────────────────────────────────────┤                                              │
- └──────────────────────┬───────────────────────┘       JSON Telemetry (stdout)          └──────────────────────────────────────────────┘
-                        │
-                        ▼
- ┌──────────────────────────────────────────────┐
- │        JUnit XML Execution Report            │
- │   • Embedded Requirements (AERO-101::TC_001) │
- └──────────────────────┬───────────────────────┘
-                        │
-                        ▼
- ┌──────────────────────────────────────────────┐
- │            GitHub Actions Pipeline           │
- │   • Automated Push Execution                 │
- │   • Direct Xray REST API Result Sync         │
- └──────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    JSON["Scenario File (.json)<br>- Input Stimuli<br>- Safety Bounds<br>- Jira Key"]
 
- # Key Features
+    subgraph SIL ["Interactive SIL Loop"]
+        HARNESS["Evaluation Harness<br>(Python)"]
+        SUT["System Under Test<br>(C++ / Python Binary)"]
+    end
+
+    JUNIT["JUnit XML Report<br>(Traceability Tags)"]
+    CICD["GitHub Actions CI/CD<br>(Jira Xray Sync)"]
+
+    JSON -->|"1. Load Config & Bounds"| HARNESS
+    HARNESS -->|"2. JSON Stimulus (stdin)"| SUT
+    SUT -->|"3. Telemetry (stdout)"| HARNESS
+    HARNESS -->|"4. Export Results"| JUNIT
+    JUNIT -->|"5. Upload Artifacts"| CICD
+```
+
+# Key Features
 Data-Driven Test Scenarios: Define input stimulus sequences and physical safety bounds in decoupled JSON files without modifying the core harness or SUT binaries.
 
 Interactive Closed-Loop Execution: Uses line-buffered non-blocking subprocess IPC pipes to feed real-time inputs into the SUT and capture state updates frame-by-frame.
