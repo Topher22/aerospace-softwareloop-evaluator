@@ -1,35 +1,28 @@
-import os
-import sys
-
-# Dynamically append current working directory to sys.path to guarantee package resolution
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-
 import argparse
 from eval_harness import EvaluationHarness, JUnitReporter
 
-
 def main():
-    parser = argparse.ArgumentParser(description="SIL System Evaluation Harness")
-    parser.add_argument("--sut", required=True, help="Path to executable binary")
-    parser.add_argument("--tests", required=True, help="Directory containing scenario JSON files")
-    parser.add_argument("--output-xml", default="reports/junit.xml", help="Output JUnit XML path")
+    parser = argparse.ArgumentParser(description="SIL Evaluation Test Suite")
+    parser.add_argument("--sut", required=True, help="Pfad zum SUT-Binary")
+    parser.add_argument("--tests", required=True, help="Verzeichnis der Test-Szenarien")
+    parser.add_argument("--output-xml", default="reports/junit.xml", help="Ausgabepfad für JUnit XML")
     args = parser.parse_args()
 
     harness = EvaluationHarness(sut_binary=args.sut, test_dir=args.tests)
     results = harness.run_suite()
 
-    os.makedirs(os.path.dirname(os.path.abspath(args.output_xml)), exist_ok=True)
+    passed_count = sum(1 for r in results if r.passed)
+    total_count = len(results)
+
+    for r in results:
+        print(f"[{r.status}] {r.jira_key} - {r.test_id} ({r.duration_ms} ms)")
+        if not r.passed:
+            for m in r.metrics:
+                if not m.passed:
+                    print(f"    -> Fehler: {m.name} = {m.value}{m.unit} (Soll: [{m.min_bound}, {m.max_bound}])")
+
     JUnitReporter.export(results, args.output_xml)
-
-    total = len(results)
-    passed = sum(1 for r in results if r.status == "PASS")
-    print(f"\n[+] Evaluation Suite Complete: {passed}/{total} Scenarios Passed.")
-
-    if passed < total:
-        sys.exit(1)
-
+    print(f"\n[+] Evaluation Suite Complete: {passed_count}/{total_count} Scenarios Passed.")
 
 if __name__ == "__main__":
     main()

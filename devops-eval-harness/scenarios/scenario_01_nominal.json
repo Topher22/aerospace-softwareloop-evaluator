@@ -1,0 +1,20 @@
+{
+  "test_key": "AERO-T101",
+  "requirement_id": "REQ-SYS-THERM-001",
+  "scenario_name": "Nominal Operation Test",
+  "description": "Verifies core telemetry baseline under nominal conditions.",
+  "steps": [
+    {
+      "step_key": "AERO-T101-S01",
+      "step_id": 1,
+      "input": {
+        "inject_fault": false,
+        "sensor_noise_mv": 0.0
+      },
+      "expected": {
+        "core_temperature.value": { "min": 20.0, "max": 30.0 },
+        "battery_voltage.value": { "min": 22.0, "max": 26.0 }
+      }
+    }
+  ]
+}

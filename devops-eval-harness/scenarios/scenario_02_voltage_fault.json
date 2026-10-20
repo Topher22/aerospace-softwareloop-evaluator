@@ -1,13 +1,20 @@
 {
-  "test_id": "TC_002_VOLTAGE_FAULT",
-  "jira_key": "AERO-102",
-  "stimuli": [
-    { "throttle_pct": 100.0, "dt_sec": 10.0 },
-    { "throttle_pct": 100.0, "dt_sec": 10.0 },
-    { "throttle_pct": 100.0, "dt_sec": 10.0 }
-  ],
-  "bounds": {
-    "battery_voltage": { "min": 20.0, "max": 28.0 },
-    "core_temperature": { "min": -20.0, "max": 85.0 }
-  }
+  "test_key": "AERO-T102",
+  "requirement_id": "REQ-SYS-FLT-012",
+  "scenario_name": "Fault Injection Test",
+  "description": "Evaluates thermal ramp and voltage decay under active fault state.",
+  "steps": [
+    {
+      "step_key": "AERO-T102-S01",
+      "step_id": 1,
+      "input": {
+        "inject_fault": true,
+        "sensor_noise_mv": 0.0
+      },
+      "expected": {
+        "core_temperature.value": { "min": 30.0, "max": 40.0 },
+        "battery_voltage.value": { "min": 20.0, "max": 23.0 }
+      }
+    }
+  ]
 }

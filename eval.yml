@@ -1,0 +1,49 @@
+name: SIL Aerospace Harness Evaluation
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-evaluate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up C++ Build Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential g++
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Compile C++17 SUT Binary
+        run: |
+          mkdir -p bin
+          g++ -std=c++17 -O2 src/sut_controller.cpp -o bin/sut_controller
+          chmod +x bin/sut_controller
+
+      - name: Run SIL Evaluation Suite
+        run: |
+          mkdir -p reports
+          python main.py --sut ./bin/sut_controller --tests ./scenarios --output-xml reports/junit.xml
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: "reports/junit.xml"
+
+      - name: Upload JUnit XML Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: junit-report
+          path: reports/junit.xml

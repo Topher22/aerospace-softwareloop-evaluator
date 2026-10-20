@@ -1,21 +1,23 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 
-#defines core data schema for evaluation metrics and test case results. Each EvalMetric captures a specific measurement, its value, unit, thresholds, and pass/fail status. TestCaseResult aggregates multiple EvalMetrics along with test metadata like ID, Jira key, duration, status, and any error messages.
 @dataclass
 class EvalMetric:
     name: str
     value: float
-    unit: str
-    threshold_max: Optional[float] = None
-    threshold_min: Optional[float] = None
+    unit: str = ""
+    min_bound: Optional[float] = None
+    max_bound: Optional[float] = None
     passed: bool = True
 
 @dataclass
 class TestCaseResult:
     test_id: str
     jira_key: str
-    duration_ms: float
-    status: str  # PASS, FAIL, ERROR
-    metrics: List[EvalMetric]
-    error_message: Optional[str] = None
+    passed: bool
+    metrics: List[EvalMetric] = field(default_factory=list)
+    duration_ms: float = 0.0
+
+    @property
+    def status(self) -> str:
+        return "PASS" if self.passed else "FAIL"

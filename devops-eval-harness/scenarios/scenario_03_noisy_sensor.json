@@ -1,0 +1,32 @@
+{
+  "test_key": "AERO-T103",
+  "requirement_id": "REQ-SYS-PWR-042",
+  "scenario_name": "Noisy Sensor & Rapid Toggle Test",
+  "description": "Evaluates thermal and voltage stability under transient noise and rapid toggling.",
+  "steps": [
+    {
+      "step_key": "AERO-T103-S01",
+      "step_id": 1,
+      "input": {
+        "inject_fault": false,
+        "sensor_noise_mv": 12.5
+      },
+      "expected": {
+        "core_temperature.value": { "min": 20.0, "max": 28.0 },
+        "battery_voltage.value": { "min": 22.0, "max": 26.0 }
+      }
+    },
+    {
+      "step_key": "AERO-T103-S02",
+      "step_id": 2,
+      "input": {
+        "inject_fault": true,
+        "sensor_noise_mv": -45.0
+      },
+      "expected": {
+        "core_temperature.value": { "min": 30.0, "max": 40.0 },
+        "battery_voltage.value": { "min": 20.0, "max": 23.0 }
+      }
+    }
+  ]
+}

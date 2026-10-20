@@ -1,31 +1,44 @@
-import json
-from dataclasses import asdict
+import xml.etree.ElementTree as ET
+import os
 from typing import List
-from xml.etree import ElementTree as ET
 from .models import TestCaseResult
 
-
 class JUnitReporter:
-    """Generates JUnit XML formatted with Jira keys for Xray REST ingestion."""
-
     @staticmethod
-    def export(results: List[TestCaseResult], output_path: str):
-        testsuites = ET.Element("testsuites")
-        suite = ET.SubElement(testsuites, "testsuite", name="SIL_Telemetry_Evaluation")
+    def export(results: List[TestCaseResult], output_path: str) -> None:
+        # Ensure output directory exists
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
+        testsuite = ET.Element("testsuite", name="SIL_Telemetry_Verification")
+        
         for res in results:
-            classname = f"{res.jira_key}::{res.test_id}" if res.jira_key else res.test_id
-            case = ET.SubElement(
-                suite,
+            testcase = ET.Element(
                 "testcase",
+                classname="TelemetryBoundsCheck",
                 name=res.test_id,
-                classname=classname,
                 time=str(round(res.duration_ms / 1000.0, 3))
             )
+            
+            # Embed Jira Requirement Key for Xray Traceability
+            if res.jira_key:
+                ET.SubElement(testcase, "property", name="test_key", value=res.jira_key)
 
-            if res.status != "PASS":
-                failure = ET.SubElement(case, "failure", message=res.error_message or "Threshold Violation")
-                failure.text = json.dumps([asdict(m) for m in res.metrics if not m.passed], indent=2)
+            # Check boolean passed flag directly
+            if not res.passed:
+                failed_metrics = [m for m in res.metrics if not m.passed]
+                failure_details = "\n".join([
+                    f"Metric '{m.name}' out of bounds: value={m.value}{m.unit} (min={m.min_bound}, max={m.max_bound})"
+                    for m in failed_metrics
+                ])
+                
+                failure_elem = ET.SubElement(
+                    testcase,
+                    "failure",
+                    message="Telemetry safety boundary violation detected"
+                )
+                failure_elem.text = failure_details or "Scenario execution failed without returned telemetry."
 
-        tree = ET.ElementTree(testsuites)
+            testsuite.append(testcase)
+
+        tree = ET.ElementTree(testsuite)
         tree.write(output_path, encoding="utf-8", xml_declaration=True)
