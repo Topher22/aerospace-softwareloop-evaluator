@@ -1,0 +1,74 @@
+name: SIL Verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sil-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sil-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Unbuffered output so a Python SUT's stdout reaches the harness pipe immediately
+      PYTHONUNBUFFERED: "1"
+      # Used only to skip the Xray upload when secrets are not configured (e.g. forks)
+      XRAY_CLIENT_ID: ${{ secrets.XRAY_CLIENT_ID }}
+    defaults:
+      run:
+        working-directory: devops-eval-harness
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      # TODO: uncomment and adapt if your SUT is a compiled C++ binary
+      # - name: Build SUT
+      #   run: |
+      #     g++ -O2 -o sut sut.cpp
+
+      # TODO: replace with your real entrypoint and arguments.
+      # The harness must exit non-zero when any scenario fails, so the job fails and blocks the PR.
+      - name: Run SIL scenarios
+        run: |
+          mkdir -p reports
+          python run_harness.py --scenarios scenarios --output reports/junit.xml
+
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-report
+          path: devops-eval-harness/reports/junit.xml
+          if-no-files-found: warn
+
+      - name: Upload results to Xray (Cloud)
+        if: always() && env.XRAY_CLIENT_ID != '' && hashFiles('devops-eval-harness/reports/junit.xml') != ''
+        env:
+          XRAY_CLIENT_SECRET: ${{ secrets.XRAY_CLIENT_SECRET }}
+        run: |
+          TOKEN=$(curl -sf -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"client_id\":\"$XRAY_CLIENT_ID\",\"client_secret\":\"$XRAY_CLIENT_SECRET\"}" \
+            https://xray.cloud.getxray.app/api/v1/authenticate | tr -d '"')
+          curl -sf -X POST \
+            -H "Content-Type: text/xml" \
+            -H "Authorization: Bearer $TOKEN" \
+            --data-binary @reports/junit.xml \
+            "https://xray.cloud.getxray.app/api/v2/import/execution/junit?projectKey=AERO"
