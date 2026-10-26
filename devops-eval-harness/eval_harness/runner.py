@@ -33,7 +33,19 @@ class SILRunner:
             else:
                 break
 
-        process.terminate()
-        process.wait()
+        # Graceful shutdown: close stdin so SUT hits EOF and exits normally
+        if process.stdin and not process.stdin.closed:
+            process.stdin.close()
+
+        # Allow normal exit so GCC's __gcov_dump() writes .gcda files
+        try:
+            process.wait(timeout=2.0)
+        except subprocess.TimeoutExpired:
+            process.terminate()
+            try:
+                process.wait(timeout=1.0)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
 
         return telemetry_frames
