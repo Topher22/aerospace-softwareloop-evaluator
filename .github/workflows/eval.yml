@@ -1,16 +1,20 @@
-mkdir -p .github/workflows
-
-cat << 'EOF' > .github/workflows/eval.yml
 name: SIL Aerospace Harness Evaluation
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
 
 permissions:
   contents: read
   checks: write
   pull-requests: write
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
 
 jobs:
   build-and-evaluate:
@@ -41,14 +45,15 @@ jobs:
           mkdir -p reports
           python main.py --sut ./bin/sut_controller --tests ./scenarios --output-xml reports/junit.xml
 
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: "reports/junit.xml"
+
       - name: Upload JUnit XML Artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: junit-report
           path: reports/junit.xml
-EOF
-
-git add -f .github/workflows/eval.yml
-git commit -m "ci: add workflow_dispatch and trigger all branches"
-git push origin HEAD
