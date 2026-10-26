@@ -19,6 +19,9 @@ permissions:
 jobs:
   build-and-evaluate:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: devops-eval-harness
 
     steps:
       - name: Check out repository
@@ -49,11 +52,11 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
-          files: "reports/junit.xml"
+          files: "devops-eval-harness/reports/junit.xml"
 
       - name: Upload JUnit XML Artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: junit-report
-          path: reports/junit.xml
+          path: devops-eval-harness/reports/junit.xml
