@@ -27,26 +27,44 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up C++ Build Tools
+      - name: Set up Build Tools & Coverage Utilities
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential g++
+          sudo apt-get install -y build-essential g++ lcov
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      - name: Compile C++17 SUT Binary
+      - name: Compile C++17 SUT Binary with Coverage Flags
         run: |
           mkdir -p bin
-          g++ -std=c++17 -O2 src/sut_controller.cpp -o bin/sut_controller
+          # --coverage generates .gcno notes during compilation
+          g++ -std=c++17 -O0 --coverage src/sut_controller.cpp -o bin/sut_controller
           chmod +x bin/sut_controller
 
       - name: Run SIL Evaluation Suite
         run: |
           mkdir -p reports
+          # Running the harness produces .gcda runtime trace files
           python main.py --sut ./bin/sut_controller --tests ./scenarios --output-xml reports/junit.xml
+
+      - name: Generate Coverage Report
+        run: |
+          mkdir -p coverage/html
+
+          # Capture raw coverage metrics from the working tree
+          lcov --capture --directory . --output-file coverage/coverage.info
+
+          # Filter out standard library, system headers, and external dependencies
+          lcov --remove coverage/coverage.info '/usr/*' '*/include/*' --output-file coverage/coverage_filtered.info
+
+          # Print terminal summary
+          lcov --list coverage/coverage_filtered.info
+
+          # Generate static browsable HTML pages
+          genhtml coverage/coverage_filtered.info --output-directory coverage/html
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
@@ -60,3 +78,10 @@ jobs:
         with:
           name: junit-report
           path: devops-eval-harness/reports/junit.xml
+
+      - name: Upload HTML Coverage Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cxx-coverage-report
+          path: devops-eval-harness/coverage/html
